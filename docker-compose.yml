@@ -1,0 +1,62 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:13
+    container_name: postgres
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=Test@123
+      - POSTGRES_DB=BankDB
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - bankapp
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  mainapp:
+    build:
+      context: ./i11labs-Springboot-BankApp   # 👈 path to your Spring Boot project
+      dockerfile: Dockerfile                  # 👈 ensure this Dockerfile is inside that folder
+    container_name: bankapp
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/BankDB
+      - SPRING_DATASOURCE_USERNAME=admin
+      - SPRING_DATASOURCE_PASSWORD=Test@123
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - bankapp
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - mainapp
+    networks:
+      - bankapp
+
+networks:
+  bankapp:
+
+volumes:
+  postgres-data:
