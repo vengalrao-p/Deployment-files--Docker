@@ -17,6 +17,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: password
     depends_on:
       - mysql-db
+    restart: always
 
   mysql-db:
     image: mysql:8.0
@@ -32,6 +33,12 @@ services:
       - "3306:3306"
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
 
   nginx:
     image: nginx:latest
@@ -44,10 +51,11 @@ services:
       - springboot-app
     networks:
       - app-network
+    restart: always
 
 volumes:
   mysql_data:
 
 networks:
   app-network:
-    driver: bridge  
+    driver: bridge
